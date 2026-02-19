@@ -1,0 +1,11 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# Tells Render this is a Node.js app (not Elixir)
+services:
+  - type: web
+    name: mt-api-nodejs
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production

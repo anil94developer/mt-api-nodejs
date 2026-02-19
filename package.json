@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "REST API for user functionality - runs alongside Laravel, same MySQL DB",
   "main": "app.js",
+  "engines": { "node": ">=18.x" },
   "scripts": {
     "start": "node app.js",
     "dev": "node app.js"
