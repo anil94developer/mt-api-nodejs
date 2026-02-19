@@ -1,0 +1,332 @@
+{
+  "info": {
+    "name": "Matka User API",
+    "description": "Node.js REST API for user functionality. Uses same MySQL DB as Laravel.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"mobile\": \"9876543210\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/register",
+            "description": "Register a new user. Mobile must be 10 digits, unique. Creates user + wallet with welcome bonus."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"status\": true,\n  \"message\": \"User registered successfully. Verify OTP to get approved.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"number\": \"9876543210\", \"type\": \"user\", \"status\": \"unapproved\" },\n    \"userId\": 1\n  }\n}"
+            },
+            {
+              "name": "Error - Mobile exists",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "body": "{\n  \"status\": false,\n  \"message\": \"Mobile number already registered.\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/login",
+            "description": "Login with mobile and password. For unapproved users, 4-digit PIN is also accepted as password."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"Login successful.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"number\": \"9876543210\", \"type\": \"user\", \"status\": \"approved\" },\n    \"wallet\": { \"user_id\": 1, \"balance\": 0 },\n    \"user_status\": \"approved\",\n    \"access_type\": \"full\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+            },
+            {
+              "name": "Error - Invalid credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"status\": false,\n  \"message\": \"Invalid password or PIN.\",\n  \"data\": null\n}"
+            },
+            {
+              "name": "Error - User not found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"status\": false,\n  \"message\": \"No account found for this mobile number. Please register first.\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"9876543210\",\n  \"otp\": \"3210\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/verify-otp",
+            "description": "OTP = last 4 digits of mobile. On success, user status set to approved and JWT returned."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"OTP verified. Account approved.\",\n  \"data\": {\n    \"user\": { \"id\": 1, \"name\": \"Test User\", \"number\": \"9876543210\", \"type\": \"user\", \"status\": \"approved\" },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
+            },
+            {
+              "name": "Error - Invalid OTP",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": false,\n  \"message\": \"Invalid OTP.\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/auth/logout",
+            "description": "Stateless JWT - client should discard token. Returns success."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"Logged out successfully.\",\n  \"data\": null\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User (Protected)",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/user/profile",
+            "description": "Get current user profile. Requires JWT."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"Profile retrieved successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Test User\",\n    \"number\": \"9876543210\",\n    \"email\": null,\n    \"type\": \"user\",\n    \"status\": \"approved\",\n    \"created_at\": \"2025-01-01T00:00:00.000Z\",\n    \"updated_at\": \"2025-01-01T00:00:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "Error - No token",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"status\": false,\n  \"message\": \"Access denied. No token provided.\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            },
+            "url": "{{base_url}}/api/user/profile",
+            "description": "Update user name. Requires JWT."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"Profile updated successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Updated Name\",\n    \"number\": \"9876543210\",\n    \"type\": \"user\",\n    \"status\": \"approved\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"123456\",\n  \"new_password\": \"newpass123\",\n  \"new_password_confirmation\": \"newpass123\"\n}"
+            },
+            "url": "{{base_url}}/api/user/update-password",
+            "description": "Change password. Requires JWT. New password min 6 characters."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"Password updated successfully.\",\n  \"data\": null\n}"
+            },
+            {
+              "name": "Error - Wrong current password",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"status\": false,\n  \"message\": \"Current password is incorrect.\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/user/user-info",
+            "description": "Same as profile. Requires JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Wallet",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/user/wallet",
+            "description": "Get wallet balance and details. Requires JWT."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"Wallet retrieved successfully.\",\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 1,\n    \"balance\": 100,\n    \"created_at\": \"2025-01-01T00:00:00.000Z\",\n    \"updated_at\": \"2025-01-01T00:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Wallet History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/api/user/wallet-history",
+            "description": "User data + withdrawal history. Requires JWT."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": true,\n  \"message\": \"Wallet history retrieved successfully.\",\n  \"data\": {\n    \"userData\": { \"name\": \"Test User\", \"number\": \"9876543210\", \"balance\": 100 },\n    \"walletHistory\": []\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Market",
+      "item": [
+        {
+          "name": "Get Kalyan Market",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": "{{base_url}}/api/market/get-kalyan-market",
+            "description": "Get Kalyan market list."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        {"name": "Add Amount", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{token}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount\": 500,\n  \"payment_method\": \"upi\",\n  \"transaction_id\": \"TXN123\"\n}"}, "url": "{{base_url}}/api/wallet/add-amount"}},
+        {"name": "Send Withdraw", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{token}}"}], "body": {"mode": "raw", "raw": "{\n  \"amount\": 2000,\n  \"bankId\": \"1\"\n}"}, "url": "{{base_url}}/api/wallet/send-withdraw"}},
+        {"name": "Get Deposit History", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": "{{base_url}}/api/wallet/get-deposit-history"}},
+        {"name": "Get Wallet History", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": "{{base_url}}/api/wallet/get-wallet-history"}}
+      ]
+    },
+    {
+      "name": "Bid",
+      "item": [
+        {"name": "Get Bid History", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": "{{base_url}}/api/bid/get-bid-history"}},
+        {"name": "Get Winning History", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": "{{base_url}}/api/bid/get-winning-history"}},
+        {"name": "Get Bet Place", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": "{{base_url}}/api/bid/get-bet-place"}},
+        {"name": "Bet Place", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{token}}"}], "body": {"mode": "raw", "raw": "{\n  \"market_id\": 11,\n  \"gtype_id\": 1,\n  \"bid_date\": \"2026-02-17\",\n  \"session\": \"open\",\n  \"open_digit\": \"5\",\n  \"amount\": 10\n}"}, "url": "{{base_url}}/api/bid/bet-place"}},
+        {"name": "Kalyan Bet Place", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{token}}"}], "body": {"mode": "raw", "raw": "{\n  \"market_id\": 11,\n  \"gtype_id\": 1,\n  \"open_digit\": \"5\",\n  \"amount\": 10\n}"}, "url": "{{base_url}}/api/bid/kalyan-bet-place"}}
+      ]
+    },
+    {
+      "name": "Game",
+      "item": [
+        {"name": "Get Game Chart", "request": {"method": "GET", "url": "{{base_url}}/api/game/get-game-chart?market_id=11"}},
+        {"name": "Get Game Rate", "request": {"method": "GET", "url": "{{base_url}}/api/game/get-game-rate"}},
+        {"name": "Get Game Type", "request": {"method": "GET", "url": "{{base_url}}/api/game/get-game-type"}}
+      ]
+    },
+    {
+      "name": "Withdraw",
+      "item": [
+        {"name": "Get Withdraw List", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": "{{base_url}}/api/withdraw/get-withdraw-list"}}
+      ]
+    },
+    {
+      "name": "Slider",
+      "item": [
+        {"name": "Get Slider", "request": {"method": "GET", "url": "{{base_url}}/api/slider/get-slider"}}
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        {"name": "Get Amount Setting", "request": {"method": "GET", "url": "{{base_url}}/api/settings/amount-setting"}},
+        {"name": "Get App Setting", "request": {"method": "GET", "url": "{{base_url}}/api/settings/app-setting"}}
+      ]
+    },
+    {
+      "name": "Bank",
+      "item": [
+        {"name": "Get Bank", "request": {"method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{token}}"}], "url": "{{base_url}}/api/bank/get-bank"}},
+        {"name": "Update Bank", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer {{token}}"}], "body": {"mode": "raw", "raw": "{\n  \"bank_name\": \"HDFC Bank\",\n  \"account_number\": \"1234567890\",\n  \"ifsc_code\": \"HDFC0001234\",\n  \"account_holder\": \"John Doe\",\n  \"account_type\": \"savings\",\n  \"branch_name\": \"Main Branch\"\n}"}, "url": "{{base_url}}/api/bank/update-bank"}}
+      ]
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health",
+        "description": "Health check."
+      }
+    }
+  ]
+}

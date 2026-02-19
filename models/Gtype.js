@@ -1,0 +1,9 @@
+const db = require('../config/database');
+
+async function getAll() {
+  return db.query('SELECT * FROM gtype ORDER BY id ASC');
+}
+
+module.exports = {
+  getAll,
+};
