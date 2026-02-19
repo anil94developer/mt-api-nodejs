@@ -1,0 +1,2 @@
+# Force Node.js only — prevents Render/Nixpacks from using Elixir
+providers = ["node"]
