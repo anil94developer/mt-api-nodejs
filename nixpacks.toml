@@ -1,2 +1,6 @@
 # Force Node.js only — prevents Render/Nixpacks from using Elixir
 providers = ["node"]
+
+# Start command (Render/Nixpacks may default to server.js otherwise)
+[start]
+cmd = "node app.js"
