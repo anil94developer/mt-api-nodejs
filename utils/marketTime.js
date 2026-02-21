@@ -4,13 +4,11 @@
  */
 function getCurrentMinutesIST() {
   const now = new Date();
-  const utcMs = now.getTime();
-  const istOffsetMs = 5.5 * 60 * 60 * 1000;
-  const istDate = new Date(utcMs + istOffsetMs);
-  const h = istDate.getUTCHours();
-  const m = istDate.getUTCMinutes();
-  const s = istDate.getUTCSeconds();
-  return h * 60 + m + s / 60;
+  const utcMin = now.getUTCHours() * 60 + now.getUTCMinutes() + now.getUTCSeconds() / 60;
+  const istMin = utcMin + 5 * 60 + 30;
+  const minutesPerDay = 24 * 60;
+  const wrapped = ((istMin % minutesPerDay) + minutesPerDay) % minutesPerDay;
+  return wrapped;
 }
 
 function parseTimeToMinutes(timeStr) {
@@ -27,36 +25,79 @@ function parseTimeToMinutes(timeStr) {
  * - close_status: true when close_time NOT yet crossed (market not closed)
  * - is_online: true only when open_time crossed AND close_time not crossed
  */
+function getCurrentMinutesIST() {
+  const now = new Date();
+
+  const istTime = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+
+  return istTime.getHours() * 60 + istTime.getMinutes();
+}
+
+function parseTimeToMinutes(time) {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function getCurrentMinutesIST() {
+  const now = new Date();
+
+  // Convert to IST safely
+  const ist = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+
+  return ist.getHours() * 60 + ist.getMinutes();
+}
+
+function parseTimeToMinutes(time) {
+  // Expecting 24-hour format: "HH:mm"
+  const [hours, minutes] = time.split(":").map(Number);
+
+  if (
+    isNaN(hours) || isNaN(minutes) ||
+    hours < 0 || hours > 23 ||
+    minutes < 0 || minutes > 59
+  ) {
+    throw new Error("Invalid 24-hour time format. Use HH:mm");
+  }
+
+  return hours * 60 + minutes;
+}
+
 function getMarketStatus(openTime, closeTime) {
   if (!openTime || !closeTime) {
     return { is_online: false, open_status: false, close_status: false };
   }
+
   const current = getCurrentMinutesIST();
   const openMin = parseTimeToMinutes(openTime);
   const closeMin = parseTimeToMinutes(closeTime);
 
-  let open_status;
-  let close_status;
-  let is_online;
+  let is_online=true;
 
-  if (openMin <= closeMin) {
-    open_status = current < openMin;
-    close_status = current < closeMin;
-    is_online = current >= openMin && current <= closeMin;
-  } else {
-    open_status = current < openMin && current > closeMin;
-    close_status = current <= closeMin || current >= openMin;
-    is_online = current >= openMin || current <= closeMin;
-  }
-
-  return { is_online, open_status, close_status };
+  // Normal timing (example: 10:00 → 18:00)
+  // if (openMin < closeMin) {
+  //   is_online = current < openMin && current < closeMin;
+  // }
+  // // Overnight timing (example: 22:00 → 02:00)
+  // else {
+    is_online = current < closeMin;
+  // }
+console.log(is_online,current, openMin, closeMin);
+  return {
+    is_online,
+    open_status: current < openMin,
+    close_status: current < closeMin
+  };
 }
-
 /**
  * Check if a market is currently online (within open_time - close_time window)
  */
 function isMarketOnline(openTime, closeTime, now = new Date()) {
   const { is_online } = getMarketStatus(openTime, closeTime);
+  console.log(is_online);
   return is_online;
 }
 
