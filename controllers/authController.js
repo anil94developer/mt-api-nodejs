@@ -3,7 +3,7 @@ const { success, error } = require('../utils/response');
 const asyncHandler = require('../utils/asyncHandler');
 
 exports.register = asyncHandler(async (req, res) => {
-  const { name, mobile, password } = req.body;
+  const { name, mobile, password, refer_code } = req.body;
   if (!name || !mobile || !password) {
     return error(res, 'Name, mobile and password are required.', 422);
   }
@@ -15,7 +15,12 @@ exports.register = asyncHandler(async (req, res) => {
     return error(res, 'Password must be at least 4 characters.', 422);
   }
   try {
-    const payload = await authService.register({ name, mobile: mobileStr, password });
+    const payload = await authService.register({
+      name,
+      mobile: mobileStr,
+      password,
+      refer_code: refer_code || req.body.referral_code,
+    });
     return success(res, payload, 'User registered successfully. Verify OTP to get approved.', 201);
   } catch (err) {
     if (err.code === 'MOBILE_EXISTS') return error(res, err.message, 422);

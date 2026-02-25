@@ -35,14 +35,20 @@ function generateToken(userId) {
 
 /**
  * Register: create user + wallet (welcome bonus from set_amount)
+ * Optional refer_code: referral code of the user who referred this signup (links one user to another)
  */
-async function register({ name, mobile, password }) {
+async function register({ name, mobile, password, refer_code }) {
   const existing = await User.findByNumber(mobile);
   if (existing) {
     const err = new Error('Mobile number already registered.');
     err.code = 'MOBILE_EXISTS';
     err.statusCode = 422;
     throw err;
+  }
+  let referredBy = null;
+  if (refer_code && String(refer_code).trim()) {
+    const referrer = await User.findByReferralCode(String(refer_code).trim());
+    if (referrer) referredBy = referrer.id;
   }
   const passwordHash = await hashPassword(password);
   const userId = await User.create({
@@ -51,6 +57,7 @@ async function register({ name, mobile, password }) {
     passwordHash,
     type: 'user',
     status: 'unapproved',
+    referredBy,
   });
   const bonusRows = await db.query('SELECT welcome_bonus FROM set_amount LIMIT 1');
   const bonus = (bonusRows && bonusRows[0] && bonusRows[0].welcome_bonus != null)

@@ -2,6 +2,8 @@ const Wallet = require('../models/Wallet');
 const Deposit = require('../models/Deposit');
 const Withdrawal = require('../models/Withdrawal');
 const Bank = require('../models/Bank');
+const AppSetting = require('../models/AppSetting');
+const db = require('../config/database');
 const { success, error } = require('../utils/response');
 const asyncHandler = require('../utils/asyncHandler');
 const { isMarketOnline } = require('../utils/marketTime');
@@ -27,9 +29,30 @@ exports.addAmount = asyncHandler(async (req, res) => {
   );
   const updated = await Wallet.addBalance(userId, amt);
 
+  // Referral commission: if this user was referred, credit referrer's wallet by referred_commission %
+  let referrerCommission = 0;
+  try {
+    const userRow = await db.queryOne('SELECT referred_by FROM users WHERE id = ?', [userId]);
+    const referrerId = userRow && userRow.referred_by != null && userRow.referred_by !== '' && Number(userRow.referred_by) > 0 ? Number(userRow.referred_by) : null;
+    if (referrerId) {
+      const admin = await AppSetting.get();
+      const pct = parseFloat(admin && admin.referred_commission) || 0;
+      if (pct > 0) {
+        referrerCommission = (amt * pct) / 100;
+        await Wallet.addBalance(referrerId, referrerCommission);
+      }
+    }
+  } catch (e) {
+    // referred_by or referred_commission column may not exist; ignore
+  }
+
   return success(
     res,
-    { wallet: updated, amount_added: amt },
+    {
+      wallet: updated,
+      amount_added: amt,
+      ...(referrerCommission > 0 && { referrer_commission_added: referrerCommission }),
+    },
     'Amount added to wallet successfully.',
     201
   );
