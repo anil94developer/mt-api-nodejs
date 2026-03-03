@@ -63,7 +63,7 @@ async function findByReferralCode(referralCode) {
   return null;
 }
 
-async function create({ name, number, passwordHash, type = 'user', status = 'unapproved', referredBy = null }) {
+async function create({ name, number, passwordHash, type = 'user', status = 'approved', referredBy = null }) {
   const pool = await db.getPool();
   const baseParams = [name, number, passwordHash, type, status];
   const sqlWithoutRef = 'INSERT INTO users (name, number, password, type, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())';

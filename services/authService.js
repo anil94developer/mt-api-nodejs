@@ -56,7 +56,7 @@ async function register({ name, mobile, password, refer_code }) {
     number: mobile,
     passwordHash,
     type: 'user',
-    status: 'unapproved',
+    status: 'approved',
     referredBy,
   });
   const bonusRows = await db.query('SELECT welcome_bonus FROM set_amount LIMIT 1');
